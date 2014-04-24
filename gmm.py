@@ -49,7 +49,7 @@ if __name__ == "__main__":
     y = d[:,2]
     print "All the", len(set(y)), "vowels:", set(y)
     
-    gmm = GMM(n_components=len(set(y)))
+    gmm = GMM(n_components=len(set(y)))  # default covar='diag'
     gmm.fit(X)
     eval_clusters(gmm.predict(X), y)
 

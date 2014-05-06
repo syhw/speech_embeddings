@@ -36,8 +36,9 @@ def parse(l, forcealigned=False, foldings={}):
                 if tmp in foldings:
                     tmp = foldings[tmp]
                 res.append(tmp)
-                if t[-1] == "!EXIT":
-                    res.append('\n')
+        if t[0] == '.':
+            res.append('\n')
+    res.pop(-1)
     return res
 
 

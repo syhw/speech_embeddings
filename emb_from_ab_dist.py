@@ -9,11 +9,10 @@ for all X' in examples:
     L += dist_{emb}(X, X') - dist_{ABX}(X, X')
 """
 
-import theano, time, pandas, sys, os
+import theano, time, pandas, sys, os, h5features
 import numpy as np
 from theano import tensor as T
 from theano import shared
-from h5features.read_features import read_features_index, read_features_simple
 
 DIM_EMBEDDING = 100  # emb dim
 
@@ -72,8 +71,8 @@ def get_feature_name_from_h5_fn(fn):
     return os.path.splitext(os.path.basename(fn))[0]                                                       
 
 def get_features_flat(fn, gn, feature_index, key, stat):
-    stim = {"fn": key, "onset": None, "offset": None}
-    features = read_features_simple(fn, gn, feature_index, stim)
+    features_dict = h5features.read(fn, gn, key, index=feature_index)[1]
+    features = features_dict[features_dict.keys()[0]]
     return stat(features)
 
 def load_speech(fn, gn, feature_index, stat_type, n_features=39):
@@ -118,7 +117,7 @@ def load_sim(fn, feature_index, stat_type):
 def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=100, dataset='TODO'):
     print '... loading data'
     speech_gn = get_feature_name_from_h5_fn(speech_fn)
-    feature_index = read_features_index(speech_fn, speech_gn)
+    feature_index = h5features.legacy_read_index(speech_fn, speech_gn)
     speech_data = load_speech(speech_fn, speech_gn, feature_index, "C")
     sim_data = load_sim(sim_fn, feature_index, "C")
     speech_train, sim_train = speech_data, sim_data

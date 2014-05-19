@@ -41,7 +41,6 @@ class Embedding:
         for ind1 in xrange(self.n_values):
             for ind2 in self.ab_ind_iterator(ind1):
                 dist += self.loss_f(ind1, ind2)
-        theano.printing.debugprint(dist)
         return dist
 
     def ab_ind_iterator(self, ind):
@@ -53,7 +52,7 @@ class Embedding:
 
     def loss_f(self, ind1, ind2):
         """RMSE between normalized distances in embedding vs ABX spaces. """
-        return T.sqrt(((self.embed_x(ind1)-self.embed_x(ind2)).norm(2)  # norm L2
+        return T.sqrt(((self.embed_x[ind1] - self.embed_x[ind2]).norm(2)  # norm L2
                 - self.ab[ind1, ind2])**2)
 
     def mean_dist(self):
@@ -101,10 +100,10 @@ def load_speech(fn, gn, feature_index, stat_type, n_features=39):
         stat = vowel_midpoint
     stimuli = feature_index['files']
     n_samples = len(stimuli)
-    #result = np.empty((n_samples, n_features)) ### TODO
-    result = np.empty((3, n_features))
-    #for i in range(n_samples): ### TODO 
-    for i in range(3):
+    result = np.empty((n_samples, n_features)) ### TODO
+    #result = np.empty((3, n_features))
+    for i in range(n_samples): ### TODO 
+    #for i in range(3):
         key = stimuli[i]
         result[i, :] = get_features_flat(fn, gn, feature_index, key, stat)
     return result

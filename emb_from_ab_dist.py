@@ -100,10 +100,10 @@ def load_speech(fn, gn, feature_index, stat_type, n_features=39):
         stat = vowel_midpoint
     stimuli = feature_index['files']
     n_samples = len(stimuli)
-    result = np.empty((n_samples, n_features)) ### TODO
-    #result = np.empty((3, n_features))
-    for i in range(n_samples): ### TODO 
-    #for i in range(3):
+    #result = np.empty((n_samples, n_features)) ### TODO
+    result = np.empty((10, n_features))
+    #for i in range(n_samples): ### TODO 
+    for i in range(10):
         key = stimuli[i]
         result[i, :] = get_features_flat(fn, gn, feature_index, key, stat)
     return result

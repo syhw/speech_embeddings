@@ -163,7 +163,7 @@ def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=10000, datas
     while (epoch < n_epochs):
         epoch = epoch + 1
         batch_avg_cost = train_embedding(lr=learning_rate)  # TODO learning rate decay
-        print(('epoch %i, training cost %f %%') % (epoch, batch_avg_cost))
+        print(('epoch %i, training cost %f') % (epoch, batch_avg_cost))
         if batch_avg_cost < best_cost:
             best_params = (emb.W, emb.b)
             with open('best_params_emb_from_ab_dist.pkl', 'w') as f:

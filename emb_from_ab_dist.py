@@ -138,7 +138,7 @@ def load_sim(fn, feature_index, stat_type):
     return result
 
 
-def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=10000, dataset='TODO'):
+def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=50000, dataset='TODO'):
     print '... loading data'
     speech_gn = get_feature_name_from_h5_fn(speech_fn)
     feature_index = h5features.legacy_read_index(speech_fn, speech_gn)
@@ -170,7 +170,7 @@ def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=10000, datas
                 cPickle.dump(best_params, f)
             best_cost = batch_avg_cost
     end_time = time.clock()
-    print(('Optimization complete with best training cost of %f %%') %
+    print(('Optimization complete with best training cost of %f') %
             (best_cost))
     print "took time (in seconds):", end_time - start_time
 

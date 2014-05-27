@@ -41,6 +41,11 @@ def parse(l, forcealigned=False, foldings={}):
     res.pop(-1)
     return res
 
+# TIMIT:
+#set(['iy', 'ix', 'aa', 'ch', 'zh', 'eh', 'ey', 'aw', 'ay', 'ax', 'er', 'z', 'ng', 'th', 'uh', 'oy', 'dh', 'y', 'hh', 'jh', 'dx', 'b', 'd', 'g', 'f', 'k', 'm', 'l', 'n', 'p', 's', 'r', 't', 'w', 'v', 'ow', 'ae', 'sil', 'uw'])
+# Buckeye
+#set(['iy', 'aa', 'ch', 'ae', 'eh', 'el', 'ah', 'ao', 'ih', 'en', 'ey', 'aw', 'ay', 'zh', 'tq', 'er', 'ng', 'nx', 'sh', 'th', 'uh', 'oy', 'dh', 'ow', 'hh', 'jh', 'dx', 'em', 'b', 'd', 'g', 'f', 'k', 'm', 'l', 'n', 'p', 's', 'r', 't', 'w', 'v', 'y', 'z', 'uw'])
+# shouldnt be 'el' ('l'), 'ah' ('ax'), 'ao' ('aa'), 'ih' ('ix'), 'en' ('n'), 'tq' ('sil'), 'nx' ('n'), 'sh' ('zh'), 'em' ('m')
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='mlf_to_text version 0.1')

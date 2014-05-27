@@ -2,8 +2,10 @@
 corpus, and then applied a phonemic dictionary on it to print phonemic output.
 """
 
+TIMIT_SCP = "/Users/gabrielsynnaeve/postdoc/datasets/TIMIT/train/train.scp"
+
 total_corpus = []
-with open("/Users/gabrielsynnaeve/postdoc/datasets/TIMIT/train/train.scp") as f:
+with open(TIMIT_SCP) as f:
     for line in f:
         fname = line.rstrip('\n').split('.')[0] + '.wrd'
         with open(fname) as rf:

@@ -62,7 +62,7 @@ if __name__ == "__main__":
         print "using the phone set", set_phones
 
     nphones = len(set_phones)
-    ndims = 10  # dimension of the embedding
+    ndims = 100  # dimension of the embedding
     print nphones, "phones"
     print "Skip-gram model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1)

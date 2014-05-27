@@ -9,11 +9,12 @@ for all X' in examples:
     L += dist_{emb}(X, X') - dist_{ABX}(X, X')
 """
 
-import theano, time, pandas, sys, os
+import theano, time, pandas, sys, os, h5features
 import numpy as np
+import cPickle
 from theano import tensor as T
 from theano import shared
-from h5features.read_features import read_features_index, read_features_simple
+from collections import OrderedDict
 
 DIM_EMBEDDING = 100  # emb dim
 
@@ -23,34 +24,57 @@ class Embedding:
         #n_in will be something like 3 * 40: 3 frames of 40 Mel filterbanks
         rng = np.random.RandomState(1234)
         W_values = np.asarray(rng.uniform(
-            low=-np.sqrt(6. / (n_in + n_out)),
-            high=np.sqrt(6. / (n_in + n_out)),
+            low=-4 * np.sqrt(6. / (n_in + n_out)),
+            high=4 * np.sqrt(6. / (n_in + n_out)),
             size=(n_in, n_out)), dtype=theano.config.floatX)
         self.W = shared(value=W_values, name='W', borrow=True)
         self.b = shared(value=np.zeros((n_out,),
             dtype=theano.config.floatX), name='b', borrow=True)
-        self.x = x  # all the examples
-        self.ab = ab  # ab[ind1][ind2] = ab distance of x[ind1] <-> x[ind2]
-        self.embed_x = T.nnet.sigmoid(T.dot(x, self.W) + self.b)
+        self.n_values = x.shape[0]
+        # ab[ind1][ind2] = ab distance of x[ind1] <-> x[ind2]
+        self.ab_npy = ab
+        tmp_ind1 = []
+        tmp_ind2 = []
+        for ind1 in xrange(self.n_values):
+            for ind2 in self.ab_ind_iterator(ind1):
+                if ind1 in tmp_ind2 and ind2 in tmp_ind1:
+                    continue  # because distance is symmetric
+                tmp_ind1.append(ind1)
+                tmp_ind2.append(ind2)
+        self.x1 = shared(np.asarray(x[tmp_ind1], dtype=theano.config.floatX))
+        self.x2 = shared(np.asarray(x[tmp_ind2], dtype=theano.config.floatX))
+        self.ab = shared(np.asarray(ab[tmp_ind1, tmp_ind2], dtype=theano.config.floatX))
+        self.embed_x1 = T.nnet.sigmoid(T.dot(self.x1, self.W) + self.b)
+        self.embed_x2 = T.nnet.sigmoid(T.dot(self.x2, self.W) + self.b)
 
     def ab_ind_iterator(self, ind):
         """Iterates only on indices for which we have an ab distance w/ ind."""
-        return [i for i, x in enumerate(self.ab[:,ind] >= 0) if x]
+        return [i for i, x in enumerate(self.ab_npy[:,ind] >= 0) if x]
 
     def project(self, x):
+        # TODO remove this method, this is just pedagogical currently
         return T.nnet.sigmoid(T.dot(x, self.W) + self.b)
 
-    def loss_f(self, ind1, ind2):
-        """RMSE between normalized distances in embedding vs ABX spaces. """
-        x1 = self.x[ind1]
-        x2 = self.x[ind2]
-        return T.sqrt(((self.project(x1)-self.project(x2)).norm(2)  # norm L2
-                - self.ab[ind1, ind2])**2)
+    def cost(self):
+        """mean RMSE between normalized distances in embedding vs ABX spaces. """
+        # TODO check normalization of features and AB human similarities!
+        return T.mean(T.sqrt(((self.embed_x1 - self.embed_x2).norm(2, axis=-1)  # norm L2
+                - self.ab)**2))
 
-    def mean_dist(self):
-        return T.mean([T.mean([self.loss_f(ind1, ind2)\
-                       for ind2 in self.ab_ind_iterator(ind1)])\
-                       for ind1 in xrange(self.x.eval().shape[0])])
+    def full_GD_trainer(self):
+        # TODO do an SGD (mini batch) trainer
+        learning_rate = T.fscalar('lr')
+        cost = self.cost()
+        g_W = T.grad(cost=cost, wrt=self.W)
+        g_b = T.grad(cost=cost, wrt=self.b)
+        updates = OrderedDict({self.W: self.W - learning_rate * g_W,
+            self.b: self.b - learning_rate * g_b})
+        train_fn = theano.function(inputs=[theano.Param(learning_rate)], 
+                outputs=cost,
+                updates=updates,
+                givens={})
+        return train_fn
+
 
 def consonant_midpoint(features):
     """ Midpoint of the first third of the chunk"""
@@ -60,6 +84,7 @@ def consonant_midpoint(features):
     point_i = range(length_third + 1)[midpoint_offset - 1] 
     return features[:,point_i]
 
+
 def vowel_midpoint(features):
     """ Midpoint of the second third of the chunk"""
     n_frames = features.shape[1]
@@ -68,13 +93,16 @@ def vowel_midpoint(features):
     point_i = range(2*length_third, n_frames + 1)[midpoint_offset - 1] 
     return features[:,point_i]
 
+
 def get_feature_name_from_h5_fn(fn):
     return os.path.splitext(os.path.basename(fn))[0]                                                       
 
+
 def get_features_flat(fn, gn, feature_index, key, stat):
-    stim = {"fn": key, "onset": None, "offset": None}
-    features = read_features_simple(fn, gn, feature_index, stim)
+    features_dict = h5features.read(fn, gn, key, index=feature_index)[1]
+    features = features_dict[features_dict.keys()[0]]
     return stat(features)
+
 
 def load_speech(fn, gn, feature_index, stat_type, n_features=39):
     if stat_type == "C":
@@ -83,18 +111,12 @@ def load_speech(fn, gn, feature_index, stat_type, n_features=39):
         stat = vowel_midpoint
     stimuli = feature_index['files']
     n_samples = len(stimuli)
-    result = np.empty((n_samples, n_features))
-    for i in range(n_samples):
+    result = np.empty((n_samples, n_features)) ### TODO
+    for i in range(n_samples): ### TODO 
         key = stimuli[i]
-        result[i,:] = get_features_flat(fn, gn, feature_index, key, stat)
+        result[i, :] = get_features_flat(fn, gn, feature_index, key, stat)
     return result
 
-def reorder_rows_and_columns(df, names):
-    names_copy = names[:]
-    for x in df.columns:
-        if x not in names_copy:
-            names_copy.append(x)
-    return dataframe[cols]
 
 def load_sim(fn, feature_index, stat_type):
     stimuli = feature_index['files']
@@ -115,45 +137,43 @@ def load_sim(fn, feature_index, stat_type):
     result = (all_sims_m.T + all_sims_m)/2.0
     return result
 
-def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=100, dataset='TODO'):
+
+def train_embedding(speech_fn, sim_fn, learning_rate=0.01, n_epochs=50000, dataset='TODO'):
     print '... loading data'
     speech_gn = get_feature_name_from_h5_fn(speech_fn)
-    feature_index = read_features_index(speech_fn, speech_gn)
+    feature_index = h5features.legacy_read_index(speech_fn, speech_gn)
     speech_data = load_speech(speech_fn, speech_gn, feature_index, "C")
     sim_data = load_sim(sim_fn, feature_index, "C")
     speech_train, sim_train = speech_data, sim_data
-    speech = T.matrix('speech')
-    speech = shared(speech_train)
-    sim = T.matrix('sim')
-    sim = shared(sim_train)
+    # TODO use 3 or 5 or 7 or more (40 mel-filterbank based) frames centered on the middle
+    print speech_train
+    print sim_train
     print '... setting up training'
-    emb = Embedding(speech, sim, n_in=speech.shape[1], n_out=DIM_EMBEDDING)
-    cost = emb.mean_dist()
-    g_W = T.grad(cost=cost, wrt=emb.W)
-    g_b = T.grad(cost=cost, wrt=emb.b)
-    updates = {emb.W: emb.W - learning_rate * g_W,
-               emb.b: emb.b - learning_rate * g_b}
-    train_embedding = theano.function(inputs=[], outputs=cost,
-            updates=updates, givens={})
+    emb = Embedding(speech_train, sim_train, n_in=speech_train.shape[1], 
+            n_out=DIM_EMBEDDING)
+    train_embedding = emb.full_GD_trainer()
 
     print '... training the model'
     # TODO early-stopping on a validation set
     best_params = None
     best_cost = np.inf
     start_time = time.clock()
-    done_looping = False
+    done_looping = False  # for use with above TODO
     epoch = 0
     while (epoch < n_epochs):
         epoch = epoch + 1
-        batch_avg_cost = train_embedding()
-        print(('epoch %i, training cost %f %%') % (epoch, batch_avg_cost))
+        batch_avg_cost = train_embedding(lr=learning_rate)  # TODO learning rate decay
+        print(('epoch %i, training cost %f') % (epoch, batch_avg_cost))
         if batch_avg_cost < best_cost:
             best_params = (emb.W, emb.b)
+            with open('best_params_emb_from_ab_dist.pkl', 'w') as f:
+                cPickle.dump(best_params, f)
             best_cost = batch_avg_cost
     end_time = time.clock()
-    print(('Optimization complete with best training cost of %f %%') %
+    print(('Optimization complete with best training cost of %f') %
             (best_cost))
     print "took time (in seconds):", end_time - start_time
+
 
 if __name__ == '__main__':
   train_embedding(sys.argv[1], sys.argv[2])

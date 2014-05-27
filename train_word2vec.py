@@ -1,7 +1,7 @@
 """Trains a Word2Vec model on a corpus, by considering phones as words.
 
 Usage:
-    train_word2vec.py file.txt
+    train_word2vec.py file.txt [file2.txt]
 
 """
 
@@ -10,10 +10,9 @@ from gensim.models import Word2Vec
 import numpy as np
 import pylab as pl
 from sklearn import manifold
-from matplotlib.text import TextPath
 
 
-def print_similarity_matrix(sphns, model):
+def print_similarity_matrix(sphns, model, model2=None):
     print "      ",
     for phn1 in sphns:
         print phn1, " ",
@@ -23,6 +22,8 @@ def print_similarity_matrix(sphns, model):
         print phn1.ljust(4) + ":",
         for j, phn2 in enumerate(sphns):
             sim = model.similarity(phn1, phn2)
+            if model2 != None:
+                sim -= model2.similarity(phn1, phn2)
             print "%0.2f" % sim,
             m[i][j] = sim
         print ""
@@ -40,14 +41,26 @@ def scattertext(X, phns, title):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print __doc__
         sys.exit(-1)
     phones = []
     with open(sys.argv[1]) as f:
         phones = map(lambda x: x.rstrip('\n').split(), f.readlines())
     set_phones = set([phn for line in phones for phn in line])
-    print set_phones
+    print "first argument phones:", set_phones
+
+    if len(sys.argv) > 2:
+        phones2 = []
+        with open(sys.argv[2]) as f:
+            phones2 = map(lambda x: x.rstrip('\n').split(), f.readlines())
+        set_phones2 = set([phn for line in phones2 for phn in line])
+        print "second argument phones:", set_phones2
+        print "!!! we are using only the intersection (for cases of phonetic vs phonemic"
+        print "check your usecase and if that's what you want!!!"
+        set_phones = set_phones.intersection(set_phones2)
+        print "using the phone set", set_phones
+
     nphones = len(set_phones)
     ndims = 10  # dimension of the embedding
     print nphones, "phones"
@@ -55,19 +68,32 @@ if __name__ == "__main__":
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1)
     X_sg = np.ndarray((nphones, ndims))
     model.save("timit_phones.word2vec")
-    phns, matr_sg = print_similarity_matrix(set_phones, model)
+    model2 = None
+    if len(sys.argv) > 2:
+        model2 = Word2Vec(phones2, size=ndims, window=5, min_count=5, workers=1)
+        #X_sg2 = np.ndarray((nphones, ndims))
+        #for i, phn in enumerate(phns):
+        #    X_sg2[i] = model[phn]
+   
+    phns, matr_sg = print_similarity_matrix(set_phones, model, model2)
     for i, phn in enumerate(phns):
         X_sg[i] = model[phn]
+
     print "CBOW model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1, sg=0)
     X_cbow = np.ndarray((nphones, ndims))
-    phns, matr_cbow = print_similarity_matrix(set_phones, model)
+    if len(sys.argv) > 2:
+        model2 = Word2Vec(phones2, size=ndims, window=5, min_count=5, workers=1, sg=0)
+        #X_cbow2 = np.ndarray((nphones, ndims))
+        #for i, phn in enumerate(phns):
+        #    X_cbow2[i] = model[phn]
+    phns, matr_cbow = print_similarity_matrix(set_phones, model, model2)
     for i, phn in enumerate(phns):
         X_cbow[i] = model[phn]
     ### Plots the similarity matrices according to these models (in order)
     ax = pl.subplot(2, 1, 1)
     ax.tick_params(labelsize=8, direction='out')
-    pl.imshow(matr_sg, interpolation='nearest')
+    pl.imshow(matr_sg, interpolation='nearest', cmap=pl.cm.Blues)
     ax.set_xticklabels(phns)
     ax.set_xticks(np.arange(nphones))
     ax.set_yticklabels(phns)
@@ -75,13 +101,14 @@ if __name__ == "__main__":
     pl.xticks(rotation=-90)
     ax = pl.subplot(2, 1, 2)
     ax.tick_params(labelsize=8, direction='out')
-    pl.imshow(matr_cbow, interpolation='nearest')
+    pl.imshow(matr_cbow, interpolation='nearest', cmap=pl.cm.Blues)
     ax.set_xticklabels(phns)
     ax.set_xticks(np.arange(nphones))
     ax.set_yticklabels(phns)
     ax.set_yticks(np.arange(nphones))
     pl.xticks(rotation=-90)
     pl.show()
+
     ### Plots MDS and Isomap of the phones vectors
     clf = manifold.MDS(n_components=2, n_init=1, max_iter=100)
     X_mds = clf.fit_transform(X_sg)

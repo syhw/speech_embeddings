@@ -1,3 +1,7 @@
+""" Uses the *.wrd files from train.scp (mfc) to build the timit "words"
+corpus, and then applied a phonemic dictionary on it to print phonemic output.
+"""
+
 total_corpus = []
 with open("/Users/gabrielsynnaeve/postdoc/datasets/TIMIT/train/train.scp") as f:
     for line in f:

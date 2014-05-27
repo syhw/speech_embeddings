@@ -1,4 +1,4 @@
-speech_embeddings
+Speech Embeddings
 =================
 
 Using embedding-based loss functions for phonetics/speech recognition.
@@ -11,12 +11,12 @@ TODO write doc
 
 ## "phn2vec" embeddings:
 
-# Phonetic annotations
+### Phonetic annotations
 
 There is no silver bullet, you need phonetically annotated speech corpora
 (e.g. TIMIT or the Buckeye corpus).
 
-# Phonemic annotations
+### Phonemic annotations
 
 Then you can also work on the phonemic annotations, for that you need to
 transform words into phonemes. I did a hack-job using the CMU phonemic dict.:
@@ -27,7 +27,7 @@ You need to have the TIMIT corpus with a `train.scp` leading to `*.xyz` files
 having corresponding `*.wrd` files with word-level annotation (look at the
 constant at the start of `timit_words_to_phonemes.py`).
 
-# How to train the embedding? (Using word2vec from gensim)
+### How to train the embedding? (Using word2vec from gensim)
 
     python mlf_to_text.py < ~/postdoc/datasets/TIMIT_train_dev_test/train/train.mlf >> timit_train_from_phones.txt
 
@@ -46,9 +46,9 @@ or
 
     python train_word2vec.py timit_train_from_phones.txt buckeye_train_from_phones.txt
 
-# Notes on the phone(me)s annotations:
+### Notes on the phone(me)s annotations:
 
-For the Buckeye corpus: "tq" (glotal stop in "cat") folded to "sil".
+For the Buckeye corpus, "tq" (glotal stop in "cat") folded to "sil".
 
 For the TIMIT corpus, "dx" (flap in "butter") inexistent in "words" (phonemic
 annotation) version.

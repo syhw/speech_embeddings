@@ -44,6 +44,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit(-1)
+    output_name = sys.argv[1].split('.')[0]
     phones = []
     with open(sys.argv[1]) as f:
         phones = map(lambda x: x.rstrip('\n').split(), f.readlines())
@@ -66,14 +67,8 @@ if __name__ == "__main__":
     print nphones, "phones"
     print "Skip-gram model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1)
-    print "d + p -t:"
-    print model.most_similar(positive=['d', 'p'], negative=['t'])
-    print "s - b:"
-    print model.most_similar(positive=['s'], negative=['b'])
-    print "uh - iy:" # uw?
-    print model.most_similar(positive=['uh'], negative=['iy'])
     X_sg = np.ndarray((nphones, ndims))
-    model.save("timit_phones.word2vec")
+    model.save(output_name + ".word2vec_sg")
     model2 = None
     if len(sys.argv) > 2:
         model2 = Word2Vec(phones2, size=ndims, window=5, min_count=5, workers=1)
@@ -87,12 +82,7 @@ if __name__ == "__main__":
 
     print "CBOW model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1, sg=0)
-    print "d + p -t:"
-    print model.most_similar(positive=['d', 'p'], negative=['t'])
-    print "s - b:"
-    print model.most_similar(positive=['s'], negative=['b'])
-    print "uh - iy:" # uw?
-    print model.most_similar(positive=['uh'], negative=['iy'])
+    model.save(output_name + ".word2vec_cbow")
     X_cbow = np.ndarray((nphones, ndims))
     if len(sys.argv) > 2:
         model2 = Word2Vec(phones2, size=ndims, window=5, min_count=5, workers=1, sg=0)

@@ -66,6 +66,12 @@ if __name__ == "__main__":
     print nphones, "phones"
     print "Skip-gram model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1)
+    print "d + p -t:"
+    print model.most_similar(positive=['d', 'p'], negative=['t'])
+    print "s - b:"
+    print model.most_similar(positive=['s'], negative=['b'])
+    print "uh - iy:" # uw?
+    print model.most_similar(positive=['uh'], negative=['iy'])
     X_sg = np.ndarray((nphones, ndims))
     model.save("timit_phones.word2vec")
     model2 = None
@@ -81,6 +87,12 @@ if __name__ == "__main__":
 
     print "CBOW model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1, sg=0)
+    print "d + p -t:"
+    print model.most_similar(positive=['d', 'p'], negative=['t'])
+    print "s - b:"
+    print model.most_similar(positive=['s'], negative=['b'])
+    print "uh - iy:" # uw?
+    print model.most_similar(positive=['uh'], negative=['iy'])
     X_cbow = np.ndarray((nphones, ndims))
     if len(sys.argv) > 2:
         model2 = Word2Vec(phones2, size=ndims, window=5, min_count=5, workers=1, sg=0)

@@ -10,6 +10,11 @@ from gensim.models import Word2Vec
 import numpy as np
 import pylab as pl
 from sklearn import manifold
+from sklearn.cluster.bicluster import SpectralBiclustering, SpectralCoclustering
+
+BICLUSTER = True
+n_clusters = 6  # number of biclusters if true
+ndims = 10  # dimension of the embedding
 
 
 def print_similarity_matrix(sphns, model, model2=None):
@@ -28,6 +33,23 @@ def print_similarity_matrix(sphns, model, model2=None):
             m[i][j] = sim
         print ""
     phn_order = [phn for phn in sphns]
+
+    if BICLUSTER:
+        #model = SpectralBiclustering(n_clusters=4, method='log',
+        model = SpectralCoclustering(n_clusters=n_clusters,
+                                             random_state=0)
+        model.fit(m)
+        print "INDICES:",
+        indices = [model.get_indices(i) for i in xrange(n_clusters)]
+        print indices
+        tmp = []
+        for i in xrange(n_clusters):
+            tmp.extend([phn_order[indices[i][0][j]] for j in xrange(len(indices[i][0]))])
+        phn_order = tmp
+        fit_data = m[np.argsort(model.row_labels_)]
+        fit_data = fit_data[:, np.argsort(model.column_labels_)]
+        m = fit_data
+
     return phn_order, m
 
 
@@ -63,7 +85,6 @@ if __name__ == "__main__":
         print "using the phone set", set_phones
 
     nphones = len(set_phones)
-    ndims = 100  # dimension of the embedding
     print nphones, "phones"
     print "Skip-gram model:"
     model = Word2Vec(phones, size=ndims, window=5, min_count=5, workers=1)
@@ -93,16 +114,18 @@ if __name__ == "__main__":
     for i, phn in enumerate(phns):
         X_cbow[i] = model[phn]
     ### Plots the similarity matrices according to these models (in order)
-    ax = pl.subplot(2, 1, 1)
-    ax.tick_params(labelsize=8, direction='out')
+    ax = pl.subplot(1, 2, 1)
+    ax.tick_params(labelsize=16, direction='out')
+    ax.set_title("skip-gram")
     pl.imshow(matr_sg, interpolation='nearest', cmap=pl.cm.Blues)
     ax.set_xticklabels(phns)
     ax.set_xticks(np.arange(nphones))
     ax.set_yticklabels(phns)
     ax.set_yticks(np.arange(nphones))
     pl.xticks(rotation=-90)
-    ax = pl.subplot(2, 1, 2)
-    ax.tick_params(labelsize=8, direction='out')
+    ax = pl.subplot(1, 2, 2)
+    ax.set_title("CBOW")
+    ax.tick_params(labelsize=16, direction='out')
     pl.imshow(matr_cbow, interpolation='nearest', cmap=pl.cm.Blues)
     ax.set_xticklabels(phns)
     ax.set_xticks(np.arange(nphones))
